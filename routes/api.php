@@ -27,4 +27,6 @@ Route::get('/email/verify/{id}/{hash}', function (\Illuminate\Foundation\Auth\Em
 Route::group(['middleware' => 'auth:api', 'namespace' => 'Api'], function(){
     Route::get('token', [\App\Http\Controllers\Api\AuthController::class, 'token'])
         ->name('auth.token');
+    Route::get('logout', [\App\Http\Controllers\Api\AuthController::class, 'logout'])
+        ->name('auth.logout');
 });

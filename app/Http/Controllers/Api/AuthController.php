@@ -10,12 +10,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Passport\Client;
+use Laravel\Passport\RefreshToken;
 
 class AuthController extends BaseController
 {
     protected $login_name;
 
-    public function __construct(){
+    public function __construct()
+    {
         $this->login_name = config('kal.login_name');
     }
 
@@ -32,12 +34,15 @@ class AuthController extends BaseController
 
         if (auth()->attempt($data, !!$request->rememberMe)) {
             $user = auth()->user();
-            auth()->login($user, !!$request->rememberMe);
-            $token = $user->createToken($this->login_name)->accessToken;
+            $user->img = config('kal.profile_img_url');
+            $token = $user->createToken($this->login_name);
             return $this->send_response(200,
                 [
                     'user' => $user,
-                    'token' => $token,
+                    'access_token' => $token->accessToken,
+                    'token_type' => 'Bearer',
+                    'login' => true,
+                    'permissions' => [],
                 ]);
         } else {
             return $this->send_response(401, ['email' => [__('auth.failed')]]);
@@ -48,20 +53,21 @@ class AuthController extends BaseController
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function register(Request $request){
+    public function register(Request $request)
+    {
         $validator = Validator::make($request->all(), [
             'email' => 'required|email|unique:users,email',
             'name' => 'required',
             'password' => 'required|confirmed|min:6'
         ]);
 
-        if($validator->fails()){
+        if ($validator->fails()) {
             $validator_errors = $validator->errors()->getMessages();
             $errors = [
                 'Email' => !empty($validator_errors['email']) ? $validator_errors['email'] : null,
                 'Clave' => !empty($validator_errors['password']) ? $validator_errors['password'] : null,
                 'Confirmar clave' => !empty($validator_errors['password_confirm']) ?
-                $validator_errors['password_confirm'] :
+                    $validator_errors['password_confirm'] :
                     null,
                 'Términos y condiciones' => !empty($validator_errors['agree']) ? $validator_errors['agree'] : null,
             ];
@@ -81,8 +87,20 @@ class AuthController extends BaseController
         ]);
     }
 
-    public function token(Request $request)
+    public function logout(){
+        $token = auth()->user()->token();
+        $token->delete();
+        return $this->send_response(201);
+    }
+
+    public function token()
     {
-        return auth()->user();
+        $user = auth()->user();
+
+        return $this->send_response(200, [
+            'user' => $user,
+            'login' => true,
+            'permissions' => [],
+        ]);
     }
 }
