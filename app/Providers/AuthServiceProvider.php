@@ -29,11 +29,11 @@ class AuthServiceProvider extends ServiceProvider
         $this->registerPolicies();
 
         if (! $this->app->routesAreCached()) {
-            Passport::routes(null, ['middleware' => \Fruitcake\Cors\HandleCors::class]);
+            Passport::routes();
             Passport::cookie(config('app.name'));
-            Passport::tokensExpireIn(now()->addDays(15));
-            Passport::refreshTokensExpireIn(now()->addDays(30));
-            Passport::personalAccessTokensExpireIn(now()->addMonths(6));
+            Passport::tokensExpireIn(now()->addDays(3));
+            Passport::refreshTokensExpireIn(now()->addDays(3));
+            Passport::personalAccessTokensExpireIn(now()->addDays(3));
         }
 
         Gate::before(function ($user) {

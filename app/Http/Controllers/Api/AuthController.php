@@ -3,13 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\BaseController;
-use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Validator;
-use Laravel\Passport\Client;
+use Laravel\Passport\PersonalAccessTokenFactory;
 use Laravel\Passport\RefreshToken;
 
 class AuthController extends BaseController
@@ -34,18 +33,20 @@ class AuthController extends BaseController
 
         if (auth()->attempt($data, !!$request->rememberMe)) {
             $user = auth()->user();
-            $user->img = config('kal.profile_img_url');
-            $token = $user->createToken($this->login_name);
+            $user->img = base64_encode(file_get_contents(public_path(config('kal.profile_img_url'))));
+            $token = $user->createToken(config('kal.login_name'));
             return $this->send_response(200,
                 [
                     'user' => $user,
                     'access_token' => $token->accessToken,
                     'token_type' => 'Bearer',
+                    'expires' => $token->token->expires_at,
                     'login' => true,
-                    'permissions' => [],
+                    'roles' => $user->getRoleNames(),
+                    'permissions' => $user->getPermissionNames(),
                 ]);
         } else {
-            return $this->send_response(401, ['email' => [__('auth.failed')]]);
+            return $this->send_response(200, ['email' => [__('auth.failed')]]);
         }
     }
 
@@ -78,12 +79,18 @@ class AuthController extends BaseController
         $input['password'] = bcrypt($input['password']);
         $user = User::create($input);
         event(new Registered($user));
-        auth()->login($user, !!$request->rememberMe);
+        auth()->login($user, true);
         $token = $user->createToken($this->login_name)->accessToken;
+        $user->img = base64_encode(file_get_contents(public_path(config('kal.profile_img_url'))));
         return $this->send_response(200, [
             'message' => "Hemos enviado un mensaje a {$user->email} con un enlace para validar tu correo electrónico",
             'user' => $user,
-            'token' => $token,
+            'access_token' => $token->accessToken,
+            'token_type' => 'Bearer',
+            'expires' => $token->token->expires_at,
+            'login' => true,
+            'roles' => $user->getRoleNames(),
+            'permissions' => $user->getPermissionNames(),
         ]);
     }
 
@@ -96,11 +103,12 @@ class AuthController extends BaseController
     public function token()
     {
         $user = auth()->user();
-
+        $user->img = base64_encode(file_get_contents(public_path(config('kal.profile_img_url'))));
         return $this->send_response(200, [
             'user' => $user,
             'login' => true,
-            'permissions' => [],
+            'roles' => $user->getRoleNames(),
+            'permissions' => $user->getPermissionNames(),
         ]);
     }
 }
