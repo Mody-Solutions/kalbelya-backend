@@ -33,17 +33,13 @@ class AuthController extends BaseController
 
         if (auth()->attempt($data, !!$request->rememberMe)) {
             $user = auth()->user();
-            $user->img = base64_encode(file_get_contents(public_path(config('kal.profile_img_url'))));
+            $user->img = $this->_img();
             $token = $user->createToken(config('kal.login_name'));
             return $this->send_response(200,
                 [
                     'user' => $user,
                     'access_token' => $token->accessToken,
                     'token_type' => 'Bearer',
-                    'expires' => $token->token->expires_at,
-                    'login' => true,
-                    'roles' => $user->getRoleNames(),
-                    'permissions' => $user->getPermissionNames(),
                 ]);
         } else {
             return $this->send_response(200, ['email' => [__('auth.failed')]]);
@@ -81,20 +77,17 @@ class AuthController extends BaseController
         event(new Registered($user));
         auth()->login($user, true);
         $token = $user->createToken($this->login_name)->accessToken;
-        $user->img = base64_encode(file_get_contents(public_path(config('kal.profile_img_url'))));
+        $user->img = $this->_img();
         return $this->send_response(200, [
             'message' => "Hemos enviado un mensaje a {$user->email} con un enlace para validar tu correo electrónico",
             'user' => $user,
             'access_token' => $token->accessToken,
             'token_type' => 'Bearer',
-            'expires' => $token->token->expires_at,
-            'login' => true,
-            'roles' => $user->getRoleNames(),
-            'permissions' => $user->getPermissionNames(),
         ]);
     }
 
-    public function logout(){
+    public function logout()
+    {
         $token = auth()->user()->token();
         $token->delete();
         return $this->send_response(201);
@@ -103,12 +96,15 @@ class AuthController extends BaseController
     public function token()
     {
         $user = auth()->user();
-        $user->img = base64_encode(file_get_contents(public_path(config('kal.profile_img_url'))));
-        return $this->send_response(200, [
-            'user' => $user,
-            'login' => true,
-            'roles' => $user->getRoleNames(),
-            'permissions' => $user->getPermissionNames(),
-        ]);
+        $user->img = $this->_img();
+        return $this->send_response(201);
+    }
+
+    private function _img($image_path = false){
+        if(!$image_path || !is_file($image_path)){
+            $image = file_get_contents(public_path(config('kal.profile_img_url')));
+            $image = base64_encode($image);
+            return "data:image/png;base64,$image";
+        }
     }
 }
