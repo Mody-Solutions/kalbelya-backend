@@ -15,8 +15,8 @@ class CreateUserProfileTable extends Migration
     {
         Schema::create('user_profile', function (Blueprint $table) {
             $table->unsignedBigInteger('user_id');
-            $table->string('aboutMe', 100);
-            $table->string('title', 50);
+            $table->string('aboutMe', 100)->nullable();
+            $table->string('title', 50)->nullable();
             $table->foreign('user_id')
                 ->references('id')
                 ->on('users');

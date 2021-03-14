@@ -4,12 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\BaseController;
 use App\Models\User;
+use App\Models\UserAddresses;
+use App\Models\UserProfile;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Validator;
-use Laravel\Passport\PersonalAccessTokenFactory;
-use Laravel\Passport\RefreshToken;
 
 class AuthController extends BaseController
 {
@@ -33,11 +32,10 @@ class AuthController extends BaseController
 
         if (auth()->attempt($data, !!$request->rememberMe)) {
             $user = auth()->user();
-            $user->img = $this->_img();
-            $token = $user->createToken(config('kal.login_name'));
+            $token = $user->createToken($this->login_name);
             return $this->send_response(200,
                 [
-                    'user' => $user,
+                    'user' => User::Data($user->id),
                     'access_token' => $token->accessToken,
                     'token_type' => 'Bearer',
                 ]);
@@ -54,7 +52,8 @@ class AuthController extends BaseController
     {
         $validator = Validator::make($request->all(), [
             'email' => 'required|email|unique:users,email',
-            'name' => 'required',
+            'firstName' => 'required',
+            'lastName' => 'required',
             'password' => 'required|confirmed|min:6'
         ]);
 
@@ -62,26 +61,29 @@ class AuthController extends BaseController
             $validator_errors = $validator->errors()->getMessages();
             $errors = [
                 'Email' => !empty($validator_errors['email']) ? $validator_errors['email'] : null,
+                'Nombre' => !empty($validator_errors['firstName']) ? $validator_errors['firstName'] : null,
+                'Apellido' => !empty($validator_errors['lastName']) ? $validator_errors['lastName'] : null,
                 'Clave' => !empty($validator_errors['password']) ? $validator_errors['password'] : null,
                 'Confirmar clave' => !empty($validator_errors['password_confirm']) ?
                     $validator_errors['password_confirm'] :
                     null,
                 'Términos y condiciones' => !empty($validator_errors['agree']) ? $validator_errors['agree'] : null,
             ];
-            return $this->send_response(400, $errors);
+            return $this->send_response(200, $errors);
         }
 
         $input = $request->except('password_confirmation');
         $input['password'] = bcrypt($input['password']);
         $user = User::create($input);
+        UserProfile::create(['user_id' => $user->id]);
+        UserAddresses::create(['user_id' => $user->id, 'isPrimary' => true]);
         event(new Registered($user));
-        auth()->login($user, true);
         $token = $user->createToken($this->login_name)->accessToken;
         $user->img = $this->_img();
         return $this->send_response(200, [
             'message' => "Hemos enviado un mensaje a {$user->email} con un enlace para validar tu correo electrónico",
-            'user' => $user,
-            'access_token' => $token->accessToken,
+            'user' => User::Data($user->id),
+            'access_token' => $token,
             'token_type' => 'Bearer',
         ]);
     }
@@ -98,13 +100,5 @@ class AuthController extends BaseController
         $user = auth()->user();
         $user->img = $this->_img();
         return $this->send_response(201);
-    }
-
-    private function _img($image_path = false){
-        if(!$image_path || !is_file($image_path)){
-            $image = file_get_contents(public_path(config('kal.profile_img_url')));
-            $image = base64_encode($image);
-            return "data:image/png;base64,$image";
-        }
     }
 }

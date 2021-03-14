@@ -19,7 +19,8 @@ class User extends Authenticatable implements MustVerifyEmail
      * @var array
      */
     protected $fillable = [
-        'name',
+        'firstName',
+        'lastName',
         'email',
         'password',
     ];
@@ -42,4 +43,23 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    public static function Data($user_id){
+        $user = User::join('user_profile', 'user_profile.user_id', 'users.id')
+            ->join('user_addresses', 'user_addresses.user_id', 'users.id')
+            ->where('id', $user_id)
+            ->where('isPrimary', 1)
+            ->get([
+                'users.*',
+                'user_profile.aboutMe',
+                'user_addresses.country',
+                'user_addresses.state',
+                'user_addresses.city',
+                'user_addresses.address',
+                'user_addresses.address2',
+                'user_addresses.postalCode',
+            ])->first();
+        $user->img = image();
+        return $user;
+    }
 }

@@ -27,6 +27,12 @@ Route::get('/email/verify/{id}/{hash}', function (\Illuminate\Foundation\Auth\Em
 Route::group(['middleware' => 'auth:api', 'namespace' => 'Api'], function(){
     Route::get('token', [\App\Http\Controllers\Api\AuthController::class, 'token'])
         ->name('auth.token');
+    Route::get('user', [\App\Http\Controllers\Api\UserController::class, 'read'])
+        ->name('user.read');
+    Route::post('user', [\App\Http\Controllers\Api\UserController::class, 'create'])
+        ->name('user.create');
+    Route::put('user', [\App\Http\Controllers\Api\UserController::class, 'update'])
+        ->name('user.update');
     Route::get('logout', [\App\Http\Controllers\Api\AuthController::class, 'logout'])
         ->name('auth.logout');
 });
